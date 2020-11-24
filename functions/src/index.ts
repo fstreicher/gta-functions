@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as sharp from 'sharp';
 import { v5 } from 'uuid';
 import { FirebaseRegions, HttpMethod, UUID_NAME, UUID_NAMESPACE } from './utils.const';
+import { Storage } from '@google-cloud/storage';
 
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
@@ -27,28 +28,44 @@ export const convertToWebp = functions
     }
 
     // only accept images
-    if (req.headers?.['content-type'] !== 'image/png' && req.headers?.['content-type'] !== 'image/jpeg') {
+    if (!req.headers?.['content-type'] || (req.headers?.['content-type'] !== 'image/png' && req.headers?.['content-type'] !== 'image/jpeg')) {
       res.status(415).json({ message: 'This endpoint only accepts content types image/png and image/jpeg' });
       return;
     }
 
     const uuid = v5(UUID_NAME, UUID_NAMESPACE);
-    const tmpFilePath = path.join(os.tmpdir(), uuid);
-    const imgBuffer = await sharp(req.body).webp().toBuffer();
-    const imgBase64 = imgBuffer.toString('base64');
+    const filename = `${uuid}.webp`;
+    const tmpFilePath = path.join(os.tmpdir(), filename);
 
-    const metaWebp = await sharp(imgBuffer).metadata();
+    // const imgBuffer = await sharp(req.body).webp().toBuffer();
+    // const imgBase64 = imgBuffer.toString('base64');
 
-    res.status(200).json({
-      message: 'OK',
-      debug: {
-        method: req.method,
-        bodyMeta: {
-          initialSize: req.headers['content-length'],
-          raw: metaWebp
-        },
-        header: req.headers,
-        image: imgBase64
-      }
-    });
+    // const metaWebp = await sharp(imgBuffer).metadata();
+
+    sharp(req.body).toFile(tmpFilePath)
+      .then(_ => {
+        new Storage().bucket('gta-dashboard').upload(tmpFilePath)
+          .then(ulReponse => {
+            res.status(200).send(ulReponse);
+          })
+          .catch(err => {
+            res.status(500).send(err);
+          });
+      })
+      .catch(err => {
+        res.status(500).send(err);
+      });
+
+    // res.status(200).json({
+    //   message: 'OK',
+    //   debug: {
+    //     method: req.method,
+    //     bodyMeta: {
+    //       initialSize: req.headers['content-length'],
+    //       raw: metaWebp
+    //     },
+    //     header: req.headers,
+    //     image: imgBase64
+    //   }
+    // });
   });
