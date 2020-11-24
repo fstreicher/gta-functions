@@ -1,6 +1,9 @@
 import * as functions from 'firebase-functions';
-import { FirebaseRegions, HttpMethod } from './utils.const';
+import * as os from 'os';
+import * as path from 'path';
 import * as sharp from 'sharp';
+import { v5 } from 'uuid';
+import { FirebaseRegions, HttpMethod, UUID_NAME, UUID_NAMESPACE } from './utils.const';
 
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
@@ -29,6 +32,8 @@ export const convertToWebp = functions
       return;
     }
 
+    const uuid = v5(UUID_NAME, UUID_NAMESPACE);
+    const tmpFilePath = path.join(os.tmpdir(), uuid);
     const imgBuffer = await sharp(req.body).webp().toBuffer();
     const imgBase64 = imgBuffer.toString('base64');
 
