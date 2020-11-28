@@ -1,18 +1,8 @@
 import * as functions from 'firebase-functions';
-import * as os from 'os';
-import * as path from 'path';
 import * as sharp from 'sharp';
-import { v5 } from 'uuid';
-import { FirebaseRegions, HttpMethod, UUID_NAME, UUID_NAMESPACE } from './utils.const';
+import { v4 } from 'uuid';
+import { FirebaseRegions, HTTPMethod } from './utils.const';
 import { Storage } from '@google-cloud/storage';
-
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-// export const helloWorld = functions.https.onRequest((req, res) => {
-//   functions.logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
 
 export const convertToWebp = functions
   .region(FirebaseRegions.FRANKFURT)
@@ -22,50 +12,33 @@ export const convertToWebp = functions
     res.set('Access-Control-Allow-Origin', '*');
 
     // deny anything but POST requests
-    if (req.method !== HttpMethod.POST) {
+    if (req.method !== HTTPMethod.POST) {
       res.status(405).json({ message: 'This endpoint only accepts POST requests' });
       return;
     }
 
     // only accept images
     if (!req.headers?.['content-type'] || (req.headers?.['content-type'] !== 'image/png' && req.headers?.['content-type'] !== 'image/jpeg')) {
-      res.status(415).json({ message: 'This endpoint only accepts content types image/png and image/jpeg' });
+      res.status(415).json({ message: 'This endpoint only accepts content types \'image/png\' and \'image/jpeg\'' });
       return;
     }
 
-    const uuid = v5(UUID_NAME, UUID_NAMESPACE);
-    const filename = `${uuid}.webp`;
-    const tmpFilePath = path.join(os.tmpdir(), filename);
+    // create Storage file handler
+    const filename = `${v4()}.webp`;
+    const file = new Storage().bucket('gta-dashboard.appspot.com').file(`staging/${filename}`);
 
-    // const imgBuffer = await sharp(req.body).webp().toBuffer();
-    // const imgBase64 = imgBuffer.toString('base64');
-
-    // const metaWebp = await sharp(imgBuffer).metadata();
-
-    sharp(req.body).toFile(tmpFilePath)
-      .then(_ => {
-        new Storage().bucket('gta-dashboard').upload(tmpFilePath)
-          .then(ulReponse => {
-            res.status(200).send(ulReponse);
+    // convert buffer to webp
+    sharp(req.body).webp().toBuffer()
+      .then(buffer => {
+        // upload buffer to bucket
+        file.save(buffer, { resumable: false })
+          .then(_ => {
+            res.status(200).send({ filename: filename });
           })
-          .catch(err => {
-            res.status(500).send(err);
-          });
+          .catch(err => res.status(500).send(err));
       })
       .catch(err => {
         res.status(500).send(err);
       });
 
-    // res.status(200).json({
-    //   message: 'OK',
-    //   debug: {
-    //     method: req.method,
-    //     bodyMeta: {
-    //       initialSize: req.headers['content-length'],
-    //       raw: metaWebp
-    //     },
-    //     header: req.headers,
-    //     image: imgBase64
-    //   }
-    // });
   });
