@@ -11,5 +11,6 @@ export enum HTTPMethod {
   POST = 'POST',
   PUT = 'PUT',
   PATCH = 'PATCH',
-  DELETE = 'DELETE'
+  DELETE = 'DELETE',
+  OPTIONS = 'OPTIONS'
 }
