@@ -47,7 +47,7 @@ export const convertToWebp = functions
     sharp(req.body).webp().toBuffer()
       .then(buffer => {
         // upload buffer to bucket
-        file.save(buffer, { resumable: false, metadata: { cacheControl: 'public, max-age=2562000' }, public: true })
+        file.save(buffer, { resumable: false, metadata: { cacheControl: 'public, max-age=2562000' } })
           .then(_ => {
             res.status(201).send({ filename: filename });
           })
