@@ -7,8 +7,13 @@ import { Storage } from '@google-cloud/storage';
 // const DIR = 'staging';
 const DIR = 'location-images';
 
+const options = {
+  memory: '1GB' as '1GB'
+}
+
 export const convertToWebp = functions
   .region(FirebaseRegions.FRANKFURT)
+  .runWith(options)
   .https
   .onRequest((req, res) => {
     // allow CORS
