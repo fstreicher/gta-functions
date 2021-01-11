@@ -4,7 +4,8 @@ import { v4 } from 'uuid';
 import { FirebaseRegions, HTTPMethod } from './utils.const';
 import { Storage } from '@google-cloud/storage';
 
-const DIR = 'staging'; // 'location-images'
+// const DIR = 'staging';
+const DIR = 'location-images';
 
 export const convertToWebp = functions
   .region(FirebaseRegions.FRANKFURT)
