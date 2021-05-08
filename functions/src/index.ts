@@ -15,7 +15,7 @@ export const convertToWebp = functions
   .region(FirebaseRegions.FRANKFURT)
   .runWith(options)
   .https
-  .onRequest((req, res) => {
+  .onRequest(async (req, res) => {
     // allow CORS
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -43,13 +43,34 @@ export const convertToWebp = functions
 
     functions.logger.debug('Checks passed, continue processing...');
 
-    // create Storage file handler
+    // create storage file handler
     const filename = `${v4()}.webp`;
     const file = new Storage().bucket('gta-dashboard.appspot.com').file(`${DIR}/${filename}`);
-    // file.setMetadata();
 
-    // convert buffer to webp
-    sharp(req.body).webp().toBuffer()
+    const originalImage = sharp(req.body);
+    const metadata = await originalImage.metadata();
+    const mapHeight = Math.floor(metadata.height / 4.8);
+
+    // crop minimap and blur
+    const miniMapSingle = await sharp(req.body)
+      .extract({
+        top: metadata.height - mapHeight,
+        left: 0,
+        height: mapHeight,
+        width: Math.floor(mapHeight * 3 / 2)
+      })
+      .blur(30)
+      .webp()
+      .toBuffer()
+
+    // composite blurred minimap onto original image
+    originalImage
+      .composite([{
+        input: miniMapSingle,
+        gravity: 'southwest'
+      }])
+      .webp()
+      .toBuffer()
       .then(buffer => {
         // upload buffer to bucket
         file.save(buffer, { resumable: false, metadata: { cacheControl: 'public, max-age=2562000' } })
